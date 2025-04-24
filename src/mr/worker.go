@@ -57,6 +57,7 @@ func Worker(mapf func(string, string) []KeyValue,
 	for {
 		reply := ExampleReply{}
 		err := CallExample(args, &reply)
+		args.WorkerID = reply.WorkerID
 		if err != nil {
 			if retry <= RETRY {
 				retry += 1
@@ -69,10 +70,11 @@ func Worker(mapf func(string, string) []KeyValue,
 		// fmt.Printf("YY_DEBUG reply from coordinator %+v", reply)
 		retry = 0
 		if reply.PleaseExit {
+			fmt.Printf("workder %+v exits\n", reply.WorkerID)
 			os.Exit(0)
 		}
 		if reply.TaskType == 1 {
-			intermediate := map[int][]string{}
+			intermediate := map[int][]KeyValue{}
 			file, err := os.Open(reply.Filename)
 			if err != nil {
 				log.Fatalf("cannot open %v", reply.Filename)
@@ -85,7 +87,7 @@ func Worker(mapf func(string, string) []KeyValue,
 			kva := mapf(reply.Filename, string(content))
 			for _, kv := range kva {
 				idx := ihash(kv.Key)%reply.NReduce
-				intermediate[idx] = append(intermediate[idx], kv.Key)
+				intermediate[idx] = append(intermediate[idx], kv)
 			}
 			writeToMapFile(intermediate, reply.TaskID)
 			args.TaskID = reply.TaskID
@@ -97,6 +99,7 @@ func Worker(mapf func(string, string) []KeyValue,
 				return
 			}
 			final := []KeyValue{}
+			kva := []KeyValue{}
 			// Iterate through all the files in the directory
 			for _, file := range files {
 				// Check if it's a file and ends with "taks"
@@ -113,35 +116,34 @@ func Worker(mapf func(string, string) []KeyValue,
 					}
 					defer file.Close()
 				
-					kva := []KeyValue{}
 					dec := json.NewDecoder(file)
 					for {
 						var kv KeyValue
 						if err := dec.Decode(&kv); err != nil {
-							fmt.Printf("YY_DEBUG error decoding map file name %+v, err %+v", file.Name(), err)
+							// fmt.Printf("YY_DEBUG error decoding map file name %+v, err %+v", file.Name(), err)
 							break
 						}
 						kva = append(kva, kv)
 					}
 					
 					file.Close()
-					sort.Sort(ByKey(kva))
-					i := 0
-					for i < len(kva) {
-						j := i + 1
-						for j < len(kva) && kva[j].Key == kva[i].Key {
-							j++
-						}
-						values := []string{}
-						for k := i; k < j; k++ {
-							values = append(values, kva[k].Value)
-						}
-						output := reducef(kva[i].Key, values)
-						final = append(final, KeyValue{kva[i].Key, output})
-						i = j
-					}
 					// fmt.Printf("YY_DEBUG reduce decode done %+v", reply)
 				}
+			}
+			sort.Sort(ByKey(kva))
+			i := 0
+			for i < len(kva) {
+				j := i + 1
+				for j < len(kva) && kva[j].Key == kva[i].Key {
+					j++
+				}
+				values := []string{}
+				for k := i; k < j; k++ {
+					values = append(values, kva[k].Value)
+				}
+				output := reducef(kva[i].Key, values)
+				final = append(final, KeyValue{kva[i].Key, output})
+				i = j
 			}
 			writeToReduceFile(final, reply.TaskID)
 			args.TaskID = reply.TaskID
@@ -153,7 +155,7 @@ func Worker(mapf func(string, string) []KeyValue,
 	}
 }
 
-func writeToMapFile(data map[int][]string, taskID int) {
+func writeToMapFile(data map[int][]KeyValue, taskID int) {
 	// Create a temporary file in the current directory
 	for reduceIdx, contents := range data {
 		tmpFile, err := os.CreateTemp(".", "temp-file-*")
@@ -167,8 +169,8 @@ func writeToMapFile(data map[int][]string, taskID int) {
 		enc := json.NewEncoder(tmpFile)
 		for i :=range contents {
 			kv := KeyValue{
-				Key: contents[i],
-				Value: "1",
+				Key: contents[i].Key,
+				Value: contents[i].Value,
 			}
 			err := enc.Encode(&kv)
 			if err != nil {

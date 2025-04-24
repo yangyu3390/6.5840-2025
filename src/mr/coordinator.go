@@ -3,6 +3,7 @@ package mr
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -22,6 +23,7 @@ type Coordinator struct {
 	doneReduceTasks map[int]struct{}
 	mapTaskTimestamp map[int]int64
 	reduceTaskTimestamp map[int]int64
+	workerIDs []int
 	pleaseExit bool
 	mu sync.Mutex
 	cond *sync.Cond
@@ -37,6 +39,12 @@ type Coordinator struct {
 func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if args.WorkerID == 0 {
+		// Generate a random int32 number.
+		reply.WorkerID = rand.Int()
+	} else {
+		reply.WorkerID = args.WorkerID
+	}
 	if args.TaskID != -1 {
 		if args.TaskType == 1 {
 			delete(c.mapTaskTimestamp, args.TaskID)
@@ -125,6 +133,7 @@ func (c *Coordinator) Done() bool {
 	if len(c.doneReduceTasks) < c.nReduce {
 		c.cond.Wait()
 	}
+	fmt.Println("coordinator: condition is being signaled")
 	c.pleaseExit = true
 	return ret
 }
@@ -152,6 +161,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 		doneReduceTasks: map[int]struct{}{},
 		mapTaskTimestamp: map[int]int64{},
 		reduceTaskTimestamp: map[int]int64{},
+		workerIDs: []int{},
 		mu: sync.Mutex{},
 	}
 	// fmt.Printf("map files: %+v", files)

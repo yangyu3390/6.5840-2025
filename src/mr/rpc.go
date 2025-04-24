@@ -19,6 +19,7 @@ import (
 type ExampleArgs struct {
 	TaskID int 
 	TaskType int
+	WorkerID int
 }
 
 type ExampleReply struct {
@@ -27,6 +28,7 @@ type ExampleReply struct {
 	Filename string
 	NReduce int
 	PleaseExit bool
+	WorkerID int
 }
 
 // Add your RPC definitions here.
