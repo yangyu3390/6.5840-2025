@@ -6,8 +6,10 @@ package mr
 // remember to capitalize all names.
 //
 
-import "os"
-import "strconv"
+import (
+	"os"
+	"strconv"
+)
 
 //
 // example to show how to declare the arguments
@@ -15,11 +17,16 @@ import "strconv"
 //
 
 type ExampleArgs struct {
-	X int
+	TaskID int 
+	TaskType int
 }
 
 type ExampleReply struct {
-	Y int
+	TaskType int
+	TaskID int
+	Filename string
+	NReduce int
+	PleaseExit bool
 }
 
 // Add your RPC definitions here.
