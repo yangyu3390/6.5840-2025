@@ -125,10 +125,10 @@ func (c *Coordinator) server() {
 // if the entire job has finished.
 //
 func (c *Coordinator) Done() bool {
-	ret := true
-	c.cond = sync.NewCond(&c.mu)  // Create a new condition variable associated with the mutex     
 	// Your code here.
 	c.mu.Lock()
+	ret := true
+	c.cond = sync.NewCond(&c.mu)  // Create a new condition variable associated with the mutex     
 	defer c.mu.Unlock()
 	if len(c.doneReduceTasks) < c.nReduce {
 		c.cond.Wait()
