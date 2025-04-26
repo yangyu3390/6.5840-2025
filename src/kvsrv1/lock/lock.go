@@ -39,37 +39,55 @@ func (lk *Lock) Acquire() {
 		if value == "" {
 			err := lk.ck.Put(lk.state, lk.id, version)
 			if err == rpc.OK {
-				return
+				value, _, _ := lk.ck.Get(lk.state)
+				if value == lk.id {
+					// fmt.Printf("ok acquire %+v\n", lk.id)	
+					return
+				}
 			}
 			if err == rpc.ErrMaybe {
 				value, _, _ := lk.ck.Get(lk.state)
 				if value == lk.id {
+					// fmt.Printf("maybe acquire %+v\n", lk.id)	
 					return
 				}
 			}
-			
-		} 
+		} else if value == lk.id {
+			return
+		}
 		time.Sleep(100 *time.Millisecond)
-		// fmt.Println("acquire end")		
+			
 	} 
+	
 }
 
 func (lk *Lock) Release() {
 	// Your code here
 	for {
-		_, version, _ := lk.ck.Get(lk.state)
-		err := lk.ck.Put(lk.state, "", version)
-	   // fmt.Printf("release id %+v, err %+v\n", lk.id, err)
-	   if err == rpc.OK {
-		   return
-	   } 
-	   if err == rpc.ErrMaybe {
-		   value, _, _ := lk.ck.Get(lk.state)
-		   if value == "" {
-			   return
-		   }
-		   // lk.version = rpc.Tversion(uint32(lk.version)+1)
-	   }
+		value, version, _ := lk.ck.Get(lk.state)
+		if value == lk.id {
+			err := lk.ck.Put(lk.state, "", version)
+			// fmt.Printf("release id %+v, err %+v\n", lk.id, err)
+			if err == rpc.OK {
+				value, _, _ := lk.ck.Get(lk.state)
+				if value == "" {
+					// fmt.Printf("ok release %+v\n", lk.id)	
+					return
+				}
+			} 
+			if err == rpc.ErrMaybe {
+				value, _, _ := lk.ck.Get(lk.state)
+				if value == "" {
+					// fmt.Printf("maybe release %+v\n", lk.id)	
+					return
+				}
+				// lk.version = rpc.Tversion(uint32(lk.version)+1)
+			}
+		} else if value == "" {
+			return
+		}
+		time.Sleep(100 *time.Millisecond)
+		// fmt.Printf("release sleep %+v\n", lk.id)	
 	}
 	
 }
