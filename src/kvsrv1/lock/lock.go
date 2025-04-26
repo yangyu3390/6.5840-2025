@@ -34,34 +34,42 @@ func MakeLock(ck kvtest.IKVClerk, l string) *Lock {
 func (lk *Lock) Acquire() {
 	// Your code here
 	for {
-		value, version, err := lk.ck.Get(lk.state)
+		value, version, _ := lk.ck.Get(lk.state)
 		// fmt.Printf("acquire id %+v, value %+v, version %+v, err %+v\n", lk.id, value, version, err)
-		if err == rpc.ErrNoKey || value == "" {
-			err = lk.ck.Put(lk.state, lk.id, version)
-			if err == rpc.OK || err == rpc.ErrMaybe {
-				lk.version = rpc.Tversion(uint32(version)+1)
+		if value == "" {
+			err := lk.ck.Put(lk.state, lk.id, version)
+			if err == rpc.OK {
 				return
 			}
-		} else if err == rpc.OK {
-			if value != "" {
-				time.Sleep(100 *time.Millisecond)
-				continue
+			if err == rpc.ErrMaybe {
+				value, _, _ := lk.ck.Get(lk.state)
+				if value == lk.id {
+					return
+				}
 			}
-			err = lk.ck.Put(lk.state, lk.id, version)
-			if err == rpc.OK || err == rpc.ErrMaybe {
-				lk.version = rpc.Tversion(uint32(version)+1)
-				return
-			}
-		}
+			
+		} 
+		time.Sleep(100 *time.Millisecond)
 		// fmt.Println("acquire end")		
 	} 
 }
 
 func (lk *Lock) Release() {
 	// Your code here
-	 err := lk.ck.Put(lk.state, "", lk.version)
-	// fmt.Printf("release id %+v, err %+v\n", lk.id, err)
-	if err == rpc.OK || err == rpc.ErrMaybe {
-		lk.version = rpc.Tversion(uint32(lk.version)+1)
+	for {
+		_, version, _ := lk.ck.Get(lk.state)
+		err := lk.ck.Put(lk.state, "", version)
+	   // fmt.Printf("release id %+v, err %+v\n", lk.id, err)
+	   if err == rpc.OK {
+		   return
+	   } 
+	   if err == rpc.ErrMaybe {
+		   value, _, _ := lk.ck.Get(lk.state)
+		   if value == "" {
+			   return
+		   }
+		   // lk.version = rpc.Tversion(uint32(lk.version)+1)
+	   }
 	}
+	
 }
