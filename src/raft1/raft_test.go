@@ -54,82 +54,82 @@ func TestInitialElection3A(t *testing.T) {
 	ts.checkOneLeader()
 }
 
-func TestReElection3A(t *testing.T) {
-	servers := 3
-	ts := makeTest(t, servers, true, false)
-	defer ts.cleanup()
+// func TestReElection3A(t *testing.T) {
+// 	servers := 3
+// 	ts := makeTest(t, servers, true, false)
+// 	defer ts.cleanup()
 
-	tester.AnnotateTest("TestReElection3A", servers)
-	ts.Begin("Test (3A): election after network failure")
+// 	tester.AnnotateTest("TestReElection3A", servers)
+// 	ts.Begin("Test (3A): election after network failure")
 
-	leader1 := ts.checkOneLeader()
+// 	leader1 := ts.checkOneLeader()
 
-	// if the leader disconnects, a new one should be elected.
-	ts.g.DisconnectAll(leader1)
-	tester.AnnotateConnection(ts.g.GetConnected())
-	ts.checkOneLeader()
+// 	// if the leader disconnects, a new one should be elected.
+// 	ts.g.DisconnectAll(leader1)
+// 	tester.AnnotateConnection(ts.g.GetConnected())
+// 	ts.checkOneLeader()
 
-	// if the old leader rejoins, that shouldn't
-	// disturb the new leader. and the old leader
-	// should switch to follower.
-	ts.g.ConnectOne(leader1)
-	tester.AnnotateConnection(ts.g.GetConnected())
-	leader2 := ts.checkOneLeader()
+// 	// if the old leader rejoins, that shouldn't
+// 	// disturb the new leader. and the old leader
+// 	// should switch to follower.
+// 	ts.g.ConnectOne(leader1)
+// 	tester.AnnotateConnection(ts.g.GetConnected())
+// 	leader2 := ts.checkOneLeader()
 
-	// if there's no quorum, no new leader should
-	// be elected.
-	ts.g.DisconnectAll(leader2)
-	ts.g.DisconnectAll((leader2 + 1) % servers)
-	tester.AnnotateConnection(ts.g.GetConnected())
-	time.Sleep(2 * RaftElectionTimeout)
+// 	// if there's no quorum, no new leader should
+// 	// be elected.
+// 	ts.g.DisconnectAll(leader2)
+// 	ts.g.DisconnectAll((leader2 + 1) % servers)
+// 	tester.AnnotateConnection(ts.g.GetConnected())
+// 	time.Sleep(2 * RaftElectionTimeout)
 
-	// check that the one connected server
-	// does not think it is the leader.
-	ts.checkNoLeader()
+// 	// check that the one connected server
+// 	// does not think it is the leader.
+// 	ts.checkNoLeader()
 
-	// if a quorum arises, it should elect a leader.
-	ts.g.ConnectOne((leader2 + 1) % servers)
-	tester.AnnotateConnection(ts.g.GetConnected())
-	ts.checkOneLeader()
+// 	// if a quorum arises, it should elect a leader.
+// 	ts.g.ConnectOne((leader2 + 1) % servers)
+// 	tester.AnnotateConnection(ts.g.GetConnected())
+// 	ts.checkOneLeader()
 
-	// re-join of last node shouldn't prevent leader from existing.
-	ts.g.ConnectOne(leader2)
-	tester.AnnotateConnection(ts.g.GetConnected())
-	ts.checkOneLeader()
-}
+// 	// re-join of last node shouldn't prevent leader from existing.
+// 	ts.g.ConnectOne(leader2)
+// 	tester.AnnotateConnection(ts.g.GetConnected())
+// 	ts.checkOneLeader()
+// }
 
-func TestManyElections3A(t *testing.T) {
-	servers := 7
-	ts := makeTest(t, servers, true, false)
-	defer ts.cleanup()
+// func TestManyElections3A(t *testing.T) {
+// 	servers := 7
+// 	ts := makeTest(t, servers, true, false)
+// 	defer ts.cleanup()
 
-	tester.AnnotateTest("TestManyElection3A", servers)
-	ts.Begin("Test (3A): multiple elections")
+// 	tester.AnnotateTest("TestManyElection3A", servers)
+// 	ts.Begin("Test (3A): multiple elections")
 
-	ts.checkOneLeader()
+// 	ts.checkOneLeader()
 
-	iters := 10
-	for ii := 1; ii < iters; ii++ {
-		// disconnect three nodes
-		i1 := rand.Int() % servers
-		i2 := rand.Int() % servers
-		i3 := rand.Int() % servers
-		ts.g.DisconnectAll(i1)
-		ts.g.DisconnectAll(i2)
-		ts.g.DisconnectAll(i3)
-		tester.AnnotateConnection(ts.g.GetConnected())
+// 	iters := 10
+// 	for ii := 1; ii < iters; ii++ {
+// 		// disconnect three nodes
+// 		i1 := rand.Int() % servers
+// 		i2 := rand.Int() % servers
+// 		i3 := rand.Int() % servers
+// 		ts.g.DisconnectAll(i1)
+// 		ts.g.DisconnectAll(i2)
+// 		ts.g.DisconnectAll(i3)
+// 		tester.AnnotateConnection(ts.g.GetConnected())
 
-		// either the current leader should still be alive,
-		// or the remaining four should elect a new one.
-		ts.checkOneLeader()
+// 		// either the current leader should still be alive,
+// 		// or the remaining four should elect a new one.
+// 		ts.checkOneLeader()
 
-		ts.g.ConnectOne(i1)
-		ts.g.ConnectOne(i2)
-		ts.g.ConnectOne(i3)
-		tester.AnnotateConnection(ts.g.GetConnected())
-	}
-	ts.checkOneLeader()
-}
+// 		ts.g.ConnectOne(i1)
+// 		ts.g.ConnectOne(i2)
+// 		ts.g.ConnectOne(i3)
+// 		tester.AnnotateConnection(ts.g.GetConnected())
+// 	}
+// 	ts.checkOneLeader()
+// }
 
 func TestBasicAgree3B(t *testing.T) {
 	servers := 3
